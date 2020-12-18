@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:form_updated/infra/db_sqflite.dart';
 import 'package:form_updated/models/user.dart';
+import 'package:form_updated/repositories/user_repository.dart';
 import 'package:form_updated/widgets/default_input.dart';
 
 class FormUserPage extends StatefulWidget {
@@ -18,19 +20,32 @@ class _FormUserPageState extends State<FormUserPage> {
 
   @override
   void initState() {
-    
     super.initState();
 
-    user = widget?.user??User();
+    user = widget?.user ?? User();
   }
 
-  void saveUser() {
+  void saveUser() async {
     if (!_formKey.currentState.validate()) {
       showSnackBar('Formulário Inválido', Colors.red);
       return;
     }
 
     _formKey.currentState.save();
+
+    var repository = UserRepository(DBSQLite());
+
+    if (user.id != null) {
+      var updated = await repository.updateUser(user);
+      if (!updated) {
+        showSnackBar('Usuário não atualizado', Colors.red);
+        return;
+      } else {
+        user.id = await repository.saveUser(user);
+      }
+    }
+
+    user.id = await repository.saveUser(user);
 
     Navigator.of(context).pop(user);
   }
@@ -47,14 +62,14 @@ class _FormUserPageState extends State<FormUserPage> {
 
   String validator(String value) => value.isEmpty ? 'Campo obrigatório' : null;
 
- // final user = User();
+  // final user = User();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
       appBar: AppBar(
-        title: Text('${user.name == null ? 'Novo': 'Editar'} Usuário'),
+        title: Text('${user.name == null ? 'Novo' : 'Editar'} Usuário'),
       ),
       body: Padding(
         padding: EdgeInsets.all(5),
